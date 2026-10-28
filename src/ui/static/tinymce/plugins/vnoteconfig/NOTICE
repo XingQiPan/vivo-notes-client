@@ -1,0 +1,5 @@
+NOTICE: This "vnote*" TinyMCE plugin is proprietary software of vivo Communications
+Co., Ltd. It was extracted from the vivo PC Suite installer for the sole purpose of
+protocol interoperability research and is NOT covered by this repository's AGPL-3.0
+license. No permission is granted to use, redistribute, or reverse-engineer it beyond
+fair-use research. Remove this directory to run the editor with standard TinyMCE only.
