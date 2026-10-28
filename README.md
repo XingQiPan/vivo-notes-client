@@ -61,6 +61,10 @@ src/
 | USN 同步驱动 | `app-modules-note.js` module 1009 |
 | 登录 cookie 映射 | `renderer.js` @1533995 |
 
+## 开源协议
+
+本项目以 **AGPL-3.0** 开源（见 LICENSE）。
+
 ## 法律与风控提示
 
 - 逆向的 appKey/secret/公钥是客户端内置公开常量，但**非官方 API**，违反 vivo 服务条款。
