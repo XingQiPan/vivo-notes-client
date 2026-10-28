@@ -1,0 +1,21 @@
+{
+  "name": "vivo-notes-client",
+  "version": "0.1.0",
+  "description": "独立复刻 vivo 笔记云同步客户端（登录 + Maodun 加密 + USN 同步）",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "test": "node --test test/sync.test.js",
+    "selftest": "node src/crypto/maodun.selftest.js"
+  },
+  "dependencies": {
+    "crypto-js": "^4.2.0",
+    "jsrsasign": "^11.1.0",
+    "node-forge": "^1.4.2"
+  },
+  "devDependencies": {
+    "electron": "^37.10.3"
+  }
+}

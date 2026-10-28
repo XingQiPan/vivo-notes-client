@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <link href="./logo.svg" rel="icon">
+    <title>tinymce-plugin</title>
+    <script src="./tinymce.min.js"></script>
+    
+  </head>
+  <body>
+    <textarea class="tinymce">
+      <vnote-title>Hi, 欢迎来到量子套件</vnote-title>
+      <vnote-config></vnote-config>
+      <vnote-layout vcolor="red" type="xxxx">
+        <layout-title>aaaaaa</layout-title>
+        <layout-desc>bbbbb</layout-desc>
+      </vnote-layout>
+      <p htype="h1"><strong><span style="font-size: 24px;">普通标题-1</span></strong></p>
+      <p htype="h2"><strong><span style="font-size: 20px;">普通标题-2</span></strong></p>
+      <p htype="h3"><strong><span style="font-size: 18px;">普通标题-3</span></strong></p>
+      <p htype="h4"><strong><span style="font-size: 16px;">普通标题-4</span></strong></p>
+      <p htype="h5"><strong><span style="font-size: 16px;">普通标题-5</span></strong></p>
+      <p htype="h5" data-collapsed="1"><strong><span style="font-size: 16px;">普通标题-5</span></strong></p>
+      <p htype="h6"><strong><span style="font-size: 16px;">普通标题-6</span></strong></p>
+      <p htype="h1"><strong><span style="font-size: 24px;">普通标题-1</span></strong></p>
+      <p indent="1"><span style="font-size: 16px;">普通缩进-1</span></p>
+      <p indent="2"><span style="font-size: 16px;">普通缩进-2</span></p>
+      <p indent="3"><span style="font-size: 16px;">普通缩进-3</span></p>
+      <p indent="4"><span style="font-size: 16px;">普通缩进-4</span></p>
+      <p indent="5"><span style="font-size: 16px;">普通缩进-5</span></p>
+      <p indent="7"><span style="font-size: 16px;">普通缩进-7</span></p>
+      <ol>
+        <li>
+            <span style="font-size: 16px;">一级1</span>
+            <ol style="list-style-type: lower-alpha;">
+                <li>
+                    <span style="font-size: 16px;">二级</span>
+                    <ol style="list-style-type: lower-roman;">
+                      <li><span style="font-size: 16px;">三-2</span></li>
+                    </ol>
+                </li>
+            </ol>
+        </li>
+        <li><span style="font-size: 16px;">一级-2</span></li>
+        <li><span style="font-size: 16px;">一级-3</span></li>
+      </ol>
+      <p><span style="font-size: 16px;"></span></p>
+      <p><span style="font-size: 16px;"></span></p>
+      <p><span style="font-size: 16px;"></span></p>
+      <p><span style="font-size: 16px;">普通文字</span></p>
+      <p><span style="font-size: 16px;" data-mce-style="font-size: 16px;">普通<span style="font-size: 18px;" data-mce-style="font-size: 18px;">文字11</span>21212<strong>121212</strong>12</span></p>
+      <p><span style="font-size: 16px;">普通文字</span></p>
+    </textarea>
+  </body>
+  <script>
+    //  这里注册使用插件
+    tinymce.init({
+      language: 'zh-CN',
+      content_css: './plugin-style.css',
+      selector: 'textarea.tinymce',
+      plugins: [
+        'vnotebase vnoteshortscut vnotesecurity selectioncontrol wordcountlimit vnotecontextmenu vnotecolor copypasteproxy vnotefilter preventdelete dropfile popover filemanager vnoteconfig forbiddentool vnoteunknown needsort pagezoom vnoteformatpainter', // 过滤器 事件代理
+        'divider vnoteaudio layout vnotedoc vnoteimage vnotevideo vnotelists vnotetable symbol vnotefont vnotelocation vnoteshorthand vnotert vnoteaipanel vnoteindent vnoteheading', // 自定义组件插件
+        'autolink code emoticons image searchreplace  wordcount title paste' // 原生插件
+      ],
+      toolbar: [
+        'layout divider vnoteaudio vnotedoc vnote-table vnote-image vnote-video symbol vnote-alphalist vnote-numlist vnote-bullist vnote-todolist vnote-color vnote-font  vnote-search vnote-partsearch vnote-hilitecolor vnote-aipanel vnote-formatpainter vnote-para-indent vnote-para-outdent vnote-heading', // 自定义组件
+        'undo redo emoticons image code forecolor underline italic strikethrough fontsizeselect bold | alignleft aligncenter alignright alignjustify ' // 原生组件
+      ],
+      custom_elements : '~vnote-rt,~vnote-rinfo,~vnote-font,~vnote-underline,~vnote-mark,~vnote-search,~vnote-partsearch,~vnote-symbol,vnote-config,vnote-layout,layout-title,layout-desc,layout-subtitle,layout-paragraph,layout-paragraph1,layout-paragraph2,layout-date,vnote-todo,todo-item,vnote-title,vnote-doc,vnote-audio,vnote-table,table-tr,table-td,vnote-image,vnote-video,vnote-divider,vnote-location,vnote-shorthand,vnote-aipanel,vnote-transfer',
+      vnote_inline_elements: ['vnote-underline', 'vnote-font', 'vnote-symbol', 'vnote-mark'],
+      vnote_block_elements: ['vnote-layout', 'vnote-audio', 'vnote-table', 'vnote-image','vnote-divider','vnote-location','vnote-shorthand', 'vnote-aipanel','vnote-transfer'],
+      height: 1000,
+      paste_retain_style_properties: 'text-align,text-indent,margin-left,padding-left,background-color,text-decoration',
+      disable_notification: true,
+      fontsize_formats: '8px 10px 12px 14px 16px 18px 24px 36px 48px 64px 72px',
+      format_empty_lines: true,
+      indent_before: '',
+      indent_after: '',
+      vnote_image_limit_count: 5,
+      vnote_word_limit_count: 1e4,
+      vnote_char_limit_count: 10 * 1e4, //字符限制,
+      vnote_table_limit_count: 5,
+      vnote_record_limit_time: 16 * 60 * 60 * 1000,
+      vnote_table_limit_row: 50,
+      vnote_table_limit_col: 50,
+      vnote_table_cell_word_limit: 200,
+      vnote_multilevel_list_enabled: true,
+      vnote_plugin_charlen_map: {
+        'vnote-layout': 250,
+        'vnote-font': 100,
+        'vnote-image': 120,
+        'vnote-table': 150,
+        'vnote-audio': 20,
+        'vnote-divider': 50,
+        'vnote-symbol': 50,
+      },
+      convert_fonts_to_spans: false,
+      defaultcolor_map: {
+        divider: {
+            smile: 'yellow',
+            line: 'black',
+            dotted: 'black'
+        },
+        font: {
+          quote: 'blue',
+          background: 'yellow',
+          clear: ''
+        },
+        layout: {
+        },
+        symbol: {
+          angle: 'blue',
+          frame: 'yellow'
+        }
+      },
+      drak_color_map: {
+        main_map: {
+          black: 'rgba(195,195,195,1.0)'
+        },
+        font_map: {
+          mark: {
+            red: 'rgba(240, 60, 70, 0.4)',
+            yellow: 'rgba(252, 216, 0, 0.5)',
+            blue: 'rgba(90, 181, 247, 0.5)',
+            green: 'rgba(95, 194, 133, 0.5)',
+            black: 'rgba(221, 221, 221, 0.5)'
+          },
+        },
+        divider_map: {
+          yellow: ['','rgba(122,122,122,1.0)'],
+          green: ['', 'rgba(122,122,122,1.0)'],
+          black: ['', 'rgba(122,122,122,1.0)'],
+        },
+        forecolor_map: {
+          black: 'rgba(255,255,255,1.0)',
+          gray: 'rgba(255,255,255,0.8)',
+          lightgray: 'rgba(255,255,255,0.3)',
+          darkblue: 'rgba(186,194,240,1.0)'
+        },
+        shorthand_map: {
+          background: 'rgba(249, 249, 249, 0.1)'
+        }
+      },
+      colormap_keys: ['main', 'divider', 'forecolor', 'font', 'mark', 'symbol', 'shorthand','drak_color'],
+      divider_map: {
+        xxoo: {
+          red: 'rgba(240,60,70,1.0)',
+          yellow: 'rgba(255,216,0,1.0)',
+          green: 'rgba(95,194,133,1.0)',
+          blue: 'rgba(90,181,247,1.0)',
+          black: 'rgba(195,195,195,1.0)'
+        },
+        smile: {
+          red: ['rgba(240,60,70,1.0)', 'rgba(90,181,247,1.0)'],
+          yellow: ['rgba(255,216,0,1.0)','rgba(31,31,31,1.0)'],
+          green: ['rgba(95,194,133,1.0)', 'rgba(31,31,31,1.0)'],
+          blue: ['rgba(90,181,247,1.0)', 'rgba(240,60,70,1.0)'],
+          black: ['rgba(195,195,195,1.0)', 'rgba(31,31,31,1.0)']
+        }
+      },
+      symbol_map: {
+        red: 'rgba(240,60,70,1.0)',
+        yellow: 'rgba(255,216,0,1.0)',
+        green: 'rgba(95,194,133,1.0)',
+        blue: 'rgba(90,181,247,1.0)',
+        black: 'rgba(195,195,195,1)'
+      },
+      forecolor_map: {
+        black: 'rgba(0,0,0,1.0)',
+        gray: 'rgba(0,0,0,0.6)',
+        lightgray: 'rgba(0,0,0,0.3)',
+        red: 'rgba(228,76,85,1.0)',
+        orange: 'rgba(239,135,51,1.0)',
+        yellow: 'rgba(243,196,67,1.0)',
+        green: 'rgba(88,176,92,1.0)',
+        blue: 'rgba(90, 181, 247, 1.0)',
+        darkblue: 'rgba(22,34,102,1.0)'
+      },
+      main_map: {
+        red: 'rgba(240, 60, 70, 1.0)',
+        yellow: 'rgba(255, 216, 0, 1.0)',
+        green: 'rgba(95, 194, 133, 1.0)',
+        blue: 'rgba(90, 181, 247, 1.0)',
+        black: 'rgba(31, 31, 31, 1.0)'
+      },
+      shorthand_map: {
+        background: 'rgba(249, 249, 249, 1)'
+      },
+      font_map: {
+        underline: {
+          gray: 'rgba(244,244,244,1.0)'
+        },
+        mark: {
+          red: 'rgba(240, 60, 70, 0.34)',
+          yellow: 'rgba(252, 216, 0, 0.56)',
+          blue: 'rgba(90, 181, 247, 0.5)',
+          green: 'rgba(95, 194, 133, 0.5)',
+          black: 'rgba(221, 221, 221, 0.8)'
+        },
+        background: {
+          yellow: 'rgba(246, 207, 64, 0.3)',
+        }
+      },
+      // icons: 'default',
+      // skin: 'oxide',
+      // 引用自定义插件样式
+      contextmenu: 'textmenu tablemenu fontmenu',
+      contextmenu_never_use_native: true,
+      extended_valid_elements : 'svg[*],path[*],circle[*],rect[*],polygon[*],ellipse[*],g[*],ul[style],ol[style],vnote-mark[vcolor]',
+      block_unsupported_drop: false, // 启用拖拽文件进入
+      lists_indent_on_tab: true, //列表插件禁用tab
+      doc_max_size: 200 * 1024 * 1024,
+      content_style: `
+        * {
+          margin: 0;
+          padding: 0;
+        }
+        p {
+          line-height: 1.86;
+          word-break: break-all;
+        }
+        .mce-content-body *[contentEditable=false] *[contentEditable=true]:hover,
+        .mce-content-body [contentEditable=false][data-vnote-preventdelete=true][data-mce-selected],
+        .mce-content-body [contentEditable=false][data-no-selectBorder=true][data-mce-selected],
+        .mce-content-body [contentEditable=false] [contentEditable=true]:focus
+         {
+          outline: none;
+        }
+        .mce-content-body [contentEditable=false][data-mce-selected] {
+          cursor: default;
+          outline: 2px solid #FCE872;
+        }
+        body{
+          padding: 4px 24px;
+          margin: 0;
+          box-sizing: border-box;
+          color: rgba(0,0,0,0.8);
+        }
+        html,body{
+          position: relative;
+        }
+        html{
+          height: 100%;
+          font-size: 16px;
+        }
+        .main-container{
+          padding: 5px 10px;
+        }
+        
+        .mce-offscreen-selection{
+          height: 0;
+          overflow: hidden;
+        }
+        p:empty:before {
+          content: '';
+          height: 26px;
+          display: block;
+        }
+      `,
+      init_instance_callback : function(editor) {
+        window.editor = editor
+        editor.formatter.formatChanged('forbiddenFont',(status) => {
+          console.log(status,editor.$(editor.selection.getNode()).attr('data-forbidden-tool'))
+        })
+        editor.fire('VnoteModeChange',{
+          isDark: false
+        });
+
+        editor.on('change keyup undo redo', () => {
+          editor.getContent()
+        });
+        window.repair = (content) => {
+          window.editor.setContent(content)  
+          return window.editor.getContent()
+        }
+        // setTimeout(() => {
+        //   editor.fire('VnoteApplyRinfo')
+        //   editor['isRtl'] = true
+        //   editor.fire('langChange', {
+        //     lang: '',
+        //     isRtl: true
+        //   })
+        // }, 300)
+        // setTimeout(() => {
+        //   editor.fire('VnoteAudioStart', {
+        //     filename: 'RECD_20220429_17451740_guid(12f5c0200cc144688064d15a26c09dc1)'
+        //   })
+        // },1000)
+        // setTimeout(() => {
+        //   editor.fire('VnoteAudioTimeUpdate', {
+        //     filename: 'RECD_20220429_17451740_guid(12f5c0200cc144688064d15a26c09dc1)',
+        //     current: 2
+        //   })
+        // },2000)
+        // setTimeout(() => {
+        //   editor.fire('VnoteAudioTimeUpdate', {
+        //     filename: 'RECD_20220429_17451740_guid(12f5c0200cc144688064d15a26c09dc1)',
+        //     current: 4
+        //   })
+        // },4000)
+        // setTimeout(() => {
+        //   editor.fire('VnoteAudioTimeUpdate', {
+        //     filename: 'RECD_20220429_17451740_guid(12f5c0200cc144688064d15a26c09dc1)',
+        //     current: 6
+        //   })
+        // },6000)
+        // setTimeout(() => {
+        //   editor.fire('VnoteAudioTimeUpdate', {
+        //     filename: 'RECD_20220429_17451740_guid(12f5c0200cc144688064d15a26c09dc1)',
+        //     current: 2
+        //   })
+        // },8000)
+        window.control && window.control.onEditorInitFinished()
+        editor.notificationManager.open({
+          text: 'An error occurred.',
+          type: 'error'
+        });
+      }
+    });
+  </script>
+</html>
