@@ -9,9 +9,10 @@
 - ✅ 三套鉴权头（网关 / 互传 / 云盘 STS）+ 网关 URL 拼装 + 业务错误码
 - ✅ 登录：Electron webview 内嵌 passport，拦截回调页 hidden input 抠 7 段 cookie
 - ✅ 同步引擎：USN 游标增量、脏数据分类、内容瘦身、30 条分块、50300 恢复、递归续拉
+- ✅ 待办同步：复用 /sync/* 引擎（SyncType.Todo=1），事件驱动即时推送，ToDo 29 列 + ToDoCategory（见 analysis/06-todo-sync.md）
 - ✅ 本地 SQLite（node:sqlite，Note/NoteBook/Tag/Resource/User/SyncState）
 - ✅ 主进程 + IPC + 极简 UI（列表/编辑/登录/同步）
-- ✅ 单测 10/10 通过
+- ✅ 单测 19/19 通过
 
 ## ⚠️ 上线前必须做的两件事
 
@@ -44,6 +45,7 @@ src/
   login/login-host.html  webview 宿主
   login/login-preload.mjs
   sync/note-sync.js      USN 同步引擎（拉/推/脏数据/分块）
+  sync/todo-sync.js      待办同步（type=1 复用引擎 + todoList/* 即时推送）
   sync/store.js          本地 SQLite
   ui/                    主界面
   main.js                Electron 主进程 + IPC

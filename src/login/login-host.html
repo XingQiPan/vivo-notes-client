@@ -31,7 +31,10 @@
                return el ? el.value : '';
              })()`, true);
           if (raw) {
-            window.__notifyHost('login-success', { rawValue: raw });
+            // 与 PC Suite 行为一致：请求回调页时浏览器已把 vivo 账号 cookie 发给网关，
+            // 网关据此在自身域下种下会话 cookie（含 @vivo_vcode_uid 风控 ID）。
+            // 后续所有业务请求必须带上这些 cookie（原版 withCredentials:true）。
+            window.__notifyHost('login-success', { rawValue: raw, callbackUrl: url });
           }
         } catch (e) {
           console.error('抓取 cookie 失败', e);

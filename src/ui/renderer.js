@@ -2,7 +2,7 @@
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
 
-const state = { notes: [], current: null, book: '-2', q: '' };
+const state = { notes: [], books: [], current: null, book: '-2', q: '' };
 
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function fmtTime(ts) {
@@ -23,26 +23,36 @@ function toast(msg) {
 }
 
 async function refresh() {
-  state.notes = await window.api.listNotes({ limit: 200 });
+  state.notes = await window.api.listNotes({ limit: 500 });
+  state.books = await window.api.listBooks();
+  renderBooks();
   const q = state.q.toLowerCase();
   let list = state.notes;
   if (state.book === 'encrypt') list = list.filter(n => n.encryptType === 1);
   else if (state.book === 'recycle') list = [];
+  else if (state.book.startsWith('book:')) {
+    const g = state.book.slice(5);
+    list = list.filter(n => n.noteBookGuid === g);
+  }
   else list = list.filter(n => n.encryptType !== 1);
-  if (q) list = list.filter(n => ((n.title||'')+(plain(n.content)||'')).toLowerCase().includes(q));
+  if (q) list = list.filter(n => ((n.title||'')+(plain(n.content)||plain(n.contentDigest)||'')).toLowerCase().includes(q));
 
   $('#cnt-all').textContent = state.notes.length || '';
   const el = $('#list'); el.innerHTML = '';
   for (const n of list) {
     const item = document.createElement('div');
     item.className = 'note-item' + (state.current === n.guid ? ' active' : '');
-    const desc = plain(n.content) || '暂无正文';
+    // 摘要优先用 contentDigest（增量包里自带纯文本正文，不用额外请求），
+    // 没有再退回 content，最后才提示加载中。
+    const desc = plain(n.content) || plain(n.contentDigest) || '（正文加载中…）';
+    const book = state.books.find(b => b.guid === n.noteBookGuid);
     item.innerHTML =
       `<div class="prefix">${n.stickTop ? '<span class="top-flag"></span>' : ''}</div>
        <div class="cnt">
          <div class="tt">${esc(n.title || '无标题')}</div>
          <div class="desc">${esc(desc)}</div>
-         <div class="doc"><span class="desc">${n.dirty ? '<span class="dirty">● 待同步</span>' : ''}</span>
+         <div class="doc"><span class="desc">${n.dirty ? '<span class="dirty">● 待同步</span>' : ''}
+           ${book ? `<span class="book-tag">${esc(book.label)}</span>` : ''}</span>
            <span class="date-info">${fmtTime(n.updateTime || n.createTime)}</span></div>
        </div>
        <div class="suffix"></div>`;
@@ -52,6 +62,31 @@ async function refresh() {
   if (list.length === 0) {
     el.innerHTML = '<div style="padding:40px 12px;text-align:center;color:var(--text-8);font-size:13px">暂无笔记</div>';
   }
+}
+
+// ---- 侧边栏渲染：静态项 + 云端笔记本 ----
+function renderBooks() {
+  const host = $('#book-list');
+  // 保留前 4 个静态项（全部/未分类/最近删除/私密），其余为动态笔记本
+  const statics = Array.from(host.querySelectorAll('.sidebar-item[data-book]:not([data-book^="book:"])'));
+  const dyn = statics.map(el => el.outerHTML).join('');
+  const items = state.books.map(b => `
+    <div class="sidebar-item" data-book="book:${esc(b.guid)}">
+      <span class="icon">📂</span><span class="text">${esc(b.label)}</span><span class="count">${b.count || ''}</span>
+    </div>`).join('');
+  host.innerHTML = dyn + items;
+  // 重新绑定
+  host.querySelectorAll('.sidebar-item').forEach(el => {
+    el.onclick = () => {
+      host.querySelectorAll('.sidebar-item').forEach(x => x.classList.remove('active'));
+      el.classList.add('active');
+      state.book = el.dataset.book;
+      $('#crumb').textContent = el.querySelector('.text').textContent;
+      refresh();
+    };
+  });
+  const active = host.querySelector(`.sidebar-item[data-book="${CSS.escape(state.book)}"]`);
+  if (active) active.classList.add('active');
 }
 
 // ---- TinyMCE 桥接：有编辑器用编辑器，没有回退 textarea ----
@@ -80,6 +115,19 @@ async function open(guid) {
   $('#editor-body').style.display = '';
   $('#toolbar').style.display = '';
   refresh();
+
+  // 正文不在增量包里，本地没有就按需向云端取
+  if (!n?.content) {
+    const meta = $('#meta-time');
+    meta.textContent = '正在加载正文…';
+    const r = await window.api.getContent(guid);
+    if (r?.content) {
+      setEditorContent(r.content);
+      meta.textContent = `更新于 ${new Date(n.updateTime || n.createTime || Date.now()).toLocaleString()}`;
+    } else {
+      meta.textContent = '（正文为空或加载失败）';
+    }
+  }
 }
 
 // ---- 顶栏 / 侧栏事件 ----
@@ -108,12 +156,17 @@ $('#btn-save').onclick = async () => {
 };
 
 $('#btn-sync').onclick = async () => {
-  $('#btn-sync').disabled = true;
-  $('#btn-sync').textContent = '⟳ 同步中…';
+  const btn = $('#btn-sync');
+  btn.disabled = true;
+  const t0 = Date.now();
+  btn.textContent = '⟳ 同步中…';
   const r = await window.api.syncNow();
-  $('#btn-sync').disabled = false;
-  $('#btn-sync').textContent = '⟳ 同步';
-  if (r.ok) toast(`同步完成（${r.direction === 'pull' ? '拉取' : r.skipped ? '无变更' : '推送'}）`);
+  btn.disabled = false;
+  btn.textContent = '⟳ 同步';
+  if (r.ok) {
+    const dir = r.direction === 'pull' ? '拉取' : (r.skipped ? '无变更' : '推送');
+    toast(`同步完成（${dir}，${r.ms || (Date.now() - t0)}ms）`);
+  }
   else toast(`同步失败：${r.error || 'code ' + r.code}`);
   refresh();
 };
@@ -148,5 +201,7 @@ $('#content').addEventListener('blur', () => { if (state.current && $('#content'
 (async function init() {
   const logged = await window.api.isLogin();
   if (logged) { $('#who').textContent = '已登录'; $('#avatar').textContent = '✓'; }
-  refresh();
+  await refresh();
+  // 后台预取正文后，定期刷新列表让摘要浮现
+  setInterval(() => { if (!document.hidden) refresh(); }, 4000);
 })();

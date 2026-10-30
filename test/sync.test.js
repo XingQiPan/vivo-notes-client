@@ -72,7 +72,7 @@ test('pushAll: 全脏数据为空时跳过', async () => {
   assert.strictEqual(calls.length, 0);
 });
 
-test('pushAll: 有脏数据 → create+update+combine', async () => {
+test('pushAll: 有脏数据 → 合并进 combineSync 分块提交', async () => {
   const calls = [];
   const fakeApi = {
     createSync: async (d) => { calls.push('create'); },
@@ -80,16 +80,21 @@ test('pushAll: 有脏数据 → create+update+combine', async () => {
     combineSync: async (d) => { calls.push('combine'); return { updateCount: 7 }; },
   };
   const ld = {
-    notes: [{ guid: 'n1', title: 'A', content: 'x', originContent: 'y', dirty: 1, deleted: 1 }],
+    notes: [
+      { guid: 'n1', title: 'A', content: 'x', originContent: 'y', dirty: 1, deleted: 1 },
+      { guid: 'n2', title: 'B', content: 'z', originContent: 'w', dirty: 1, deleted: 1, updateSequenceNum: 5 },
+    ],
     tags: [], resources: [], noteBooks: [], deleteResourceGuids: [],
   };
   const r = await pushAll(fakeApi, ld, 0);
-  assert.ok(calls.includes('create'));
+  // 真机验证：create/update 不单独发请求，全部合并进 combineSync（payload 内含 createSync/updateSync 字段）
+  assert.strictEqual(calls.includes('create'), false);
+  assert.strictEqual(calls.includes('update'), false);
   assert.ok(calls.includes('combine'));
   assert.strictEqual(r.newLastUpdateCount, 7);
 });
 
-test('pullAll: 递归续拉直到 updateCount === chunkHighUsn', async () => {
+test('pullAll: 游标用 chunkHighUsn 推进，直到追上 updateCount', async () => {
   let usn = 0;
   const setUsn = (v) => { usn = v; };
   const getUsn = () => usn;
@@ -97,12 +102,13 @@ test('pullAll: 递归续拉直到 updateCount === chunkHighUsn', async () => {
   const fakeApi = {
     fetchSyncData: async ({ afterUsn }) => {
       n++;
-      const updateCount = afterUsn + 100;
-      return { notes: [], noteBooks: [], tags: [], resources: [], updateCount, chunkHighUsn: n < 3 ? updateCount - 1 : updateCount };
+      const chunkHighUsn = afterUsn + 100;
+      // updateCount 恒为 300（服务端总量）；chunkHighUsn 逐批追平
+      return { notes: [], noteBooks: [], tags: [], resources: [], updateCount: 300, chunkHighUsn };
     },
   };
   await pullAll(fakeApi, getUsn, setUsn, async () => {});
-  assert.strictEqual(n, 3);
+  assert.strictEqual(n, 3);   // 100 → 200 → 300 三批
   assert.strictEqual(usn, 300);
 });
 

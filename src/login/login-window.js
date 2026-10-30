@@ -7,6 +7,7 @@ import { BrowserWindow } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildLoginUrl, isLoginCallback, parseLoginCookie } from './passport.js';
+import { migrateAccountCookies } from './cookies.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -34,13 +35,21 @@ export function openLoginWindow(opts = {}) {
     win.loadFile(path.join(__dirname, 'login-host.html'), { query: { src: url } });
 
     // 通过 IPC 接收 login-success
-    const onIpc = (event, arg) => {
+    const onIpc = async (event, arg) => {
       if (event.senderFrame.url && isLoginCallback(event.senderFrame.url)) {
         // 二次校验来源
       }
       const raw = arg && arg.rawValue;
       if (raw) {
-        resolve(parseLoginCookie(raw));
+        const userInfo = parseLoginCookie(raw);
+        userInfo.deviceId = userInfo.vivo_account_cookie_iqoo_deviceid;
+        try {
+          const cookies = await migrateAccountCookies();
+          userInfo._cookieNames = cookies.map(c => `${c.domain}:${c.name}`).join(',');
+        } catch (e) {
+          console.error('[login] cookie 迁移失败:', e);
+        }
+        resolve(userInfo);
         if (!win.isDestroyed()) win.close();
       }
     };

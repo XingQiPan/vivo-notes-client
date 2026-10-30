@@ -125,27 +125,30 @@ function normalizePem(b64OrPem) {
 export class Maodun {
   /**
    * @param {string} publicKeyB64 base64(PEM) 或 PEM 文本
-   * @param {object} opts { protocalType=0, keyVersion=1, encryptionType=1, keyToken=new Uint8Array([0]) }
+   * @param {object} opts { protocalType, keyVersion, encryptionType, keyToken }
+   * 默认值取自笔记模块的内置公钥包（app-modules-note.js）：
+   *   keyToken=com.vivo.atomic.note, keyVersion=1, protocalType=0x0020, encryptionType=0x41
    */
   constructor(publicKeyB64, opts = {}) {
     this.publicKeyB64 = publicKeyB64;
     this.aesKey = opts.aesKey || randomKey(16);
     this.aesIv = opts.aesIv || randomKey(16);
-    this.protocalType = opts.protocalType ?? 0;     // 2 字节
-    this.keyVersion = opts.keyVersion ?? 1;         // 2 字节
-    this.encryptionType = opts.encryptionType ?? 1; // 1 字节
-    this.keyToken = opts.keyToken ?? new Uint8Array([0]); // 1 字节长度 + 内容
+    this.protocalType = opts.protocalType ?? 0x0020;      // 2 字节大端
+    this.keyVersion = opts.keyVersion ?? 0x0001;          // 2 字节大端
+    this.encryptionType = opts.encryptionType ?? 0x41;    // 1 字节（'A'）
+    this.keyToken = opts.keyToken ?? new Uint8Array(Buffer.from('com.vivo.atomic.note', 'ascii'));
     this.keyTokenLen = this.keyToken.length;
   }
 
   _buildHeader() {
-    const pt = new Uint8Array(2); pt[0] = this.protocalType & 255; pt[1] = (this.protocalType >> 8) & 255;
-    const magic = new Uint8Array(2); magic[0] = 203; magic[1] = 0; // getInt16Bytes(2,203) 大端? 见下注
-    // bundle: getInt16Bytes 用 DataView.setInt16(默认大端) 写 203 → [0,203]
-    magic[0] = (203 >> 8) & 255; magic[1] = 203 & 255; // 大端 → [0,203]
+    const pt = new Uint8Array(2); pt[0] = (this.protocalType >> 8) & 255; pt[1] = this.protocalType & 255;
+    const magic = new Uint8Array(2); magic[0] = (203 >> 8) & 255; magic[1] = 203 & 255; // 大端 → [0,203]
     const kv = new Uint8Array(2); kv[0] = (this.keyVersion >> 8) & 255; kv[1] = this.keyVersion & 255;
     const et = new Uint8Array([this.encryptionType & 255]);
     const ktl = new Uint8Array([this.keyTokenLen & 255]);
+    // 原版：q.bufferAESiv = new Int16Array(stringToArrayBuffer(aesIv))
+    // 但 concat helper 累加的是 Int16Array.length（=16，不是 32），且 Int8Array.set()
+    // 会把每个码元截断成低字节 → 头里 IV 字段实际是 16 字节 ASCII（不是 UTF-16LE）。
     const iv = new Uint8Array(Buffer.from(this.aesIv, 'ascii')); // 16 字节
     const rsaKey = rsaEncryptKey(this.aesKey, this.publicKeyB64);
     const rkl = new Uint8Array(2); rkl[0] = (rsaKey.length >> 8) & 255; rkl[1] = rsaKey.length & 255;
@@ -159,32 +162,43 @@ export class Maodun {
     const header = this._buildHeader();
     const crc = crcToBytes(crc32(header));
     const withCrc = concatBytes([crc, header]);
-    // 长度前缀声明的是 CRC+header 的字节数（大端 uint16）
-    const len = withCrc.length;
+    // 长度前缀 = withCrc.length + 2（长度前缀自身 2 字节）。
+    // 服务器按 [lenPrefix+2, lenPrefix+10+headerLen) 计算头部校验和，
+    // 所以这里的值必须精确等于 header.length + 10。
+    const len = withCrc.length + 2;
     const lenPrefix = new Uint8Array([(len >> 8) & 255, len & 255]);
     const body = fromBase64UrlSafe(aesEncrypt(plaintext, this.aesKey, this.aesIv));
     const full = concatBytes([lenPrefix, withCrc, body]);
     return { code: 0, data: toBase64Url(full) };
   }
 
-  /** 解密服务端响应（若走同一信封格式） */
+  /**
+   * 解密服务端响应（jvq_response）。
+   *
+   * 响应信封布局（逐字节核对 + 与 bundle 的 decrypt() 一致）：
+   *   len(2) + crc(8) + pt(2) + magic(2) + kv(2) + et(1) + ktl(1)
+   *   + keyToken(n) + iv(16) + sigLen(2) + 签名(sigLen) + 密文
+   *
+   * 其中：
+   *   - magic 在 [12,14) 必须是 203
+   *   - iv 在 [18+n, 34+n)，服务端**回显我们请求里的 IV**
+   *   - 密文起点 i = 34 + ktl，i 处 2 字节是签名长度 n，密文从 i+2+n 开始
+   *   - AES key 仍是本会话随机生成的同一个 key
+   */
   decrypt(b64url) {
     const bytes = fromBase64Url(b64url);
-    // 跳过 2 字节长度前缀 + 8 字节 CRC，再跳过 header 到密文体
-    // header 长度需从包内解析：magic 在 offset 2..4，keyTokenLen 在 offset 7
     const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    let off = 2 + 8; // len + crc
-    // pt(2) magic(2) kv(2) et(1) ktl(1)
-    const ktl = bytes[off + 7];
-    const ivLen = 16;
-    const rklOff = off + 8 + ktl + ivLen;
-    const rsaKeyLen = (bytes[rklOff] << 8) | bytes[rklOff + 1];
-    const headerEnd = rklOff + 2 + rsaKeyLen;
-    const body = bytes.subarray(headerEnd);
-    // 解密 AES key：需私钥，客户端一般不解密响应（响应明文或另用 key）
-    // 这里仅还原密文 base64，AES key 已知（本会话生成）
-    const ctB64 = Buffer.from(body).toString('base64');
-    return aesDecrypt(ctB64, this.aesKey, this.aesIv);
+    const magic = dv.getUint16(12);
+    if (magic !== 203) {
+      throw Object.assign(new Error(`响应 magic 不是 203（是 ${magic}）`), { code: 100009 });
+    }
+    const keyTokenLen = dv.getInt8(17);
+    const i = keyTokenLen + 34;          // = iv 起点之后 2 字节（sigLen）
+    const sigLen = dv.getInt16(i);
+    const ivOff = 18 + keyTokenLen;
+    const respIv = Buffer.from(bytes.subarray(ivOff, ivOff + 16)).toString('latin1');
+    const ct = Buffer.from(bytes.subarray(i + 2 + sigLen)).toString('base64');
+    return aesDecrypt(ct, this.aesKey, respIv);
   }
 }
 

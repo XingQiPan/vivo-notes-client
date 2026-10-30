@@ -37,8 +37,31 @@ export const PC_REDIRECT = {
   test: 'https://productivity-suite-test.vivo.com.cn/vbusiness/account/cookie/getHtml',
 };
 
-// Maodun 内置 RSA-2048 公钥（从 bundle module 5227 提取）
+// Maodun 内置 RSA-2048 公钥
+//
+// bundle 里每个模块各自带一组 keyToken × keyVersion 的公钥包（magic 204 blob）。
+// 笔记模块（app-modules-note.js / 126.js）用的是 keyToken = "com.vivo.atomic.note"，
+// 而 analysis/04-note-sync.md 里摘录的 "com.bbk.calendar" 那一组是日历模块的 ——
+// 用错 keyToken 会被服务器以「找不到 keyToken:...,keyType:8,keyVersion:...对应的三级密钥」拒绝。
+//
+// 服务器实测可用的组合：keyToken=com.vivo.atomic.note, keyVersion=1, encryptionType=65。
+// 其余两个 keyVersion（221 / 231）服务器侧已无对应三级密钥。
 export const MAODUN_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvHf1Y2s5sT4sGXOS//EBaZED8XYOxV0maVJUmq26+/pORe8KapSwkYd/xJxgZL+9i/F3fzVilLZsyO1WdVbu47//sBrfp2TiCIAGYAFVTzviaNVmT7FAC4fh7Bx2eRmbWozlDpbvQuaGxtd0NlbU/HwhDecLjYu9boaeOKJiVYOlKa8MB1lkv4OV0lwphgELjky4lvTTtVqNcz6h1j1+RMOR6iYcCRsfJVjDb1Tsev3ETp8kKc34dGtUjA+eRMfna6M2ZCKNOci+7ElV/AIjKHxXzRnfgubxpnNU4AgAolHjXxaPi7Xuytufx47igerABnwQtBENjpm0rjsP12op8QIDAQAB
+-----END PUBLIC KEY-----`;
+
+// 信封头参数（与 blob 解析结果一致）：
+//   keyToken     = com.vivo.atomic.note
+//   keyVersion   = 1
+//   protocalType = 0x0020
+//   encryptionType = 0x41 (65)
+export const MAODUN_KEY_TOKEN = 'com.vivo.atomic.note';
+export const MAODUN_KEY_VERSION = 1;
+export const MAODUN_PROTOCAL_TYPE = 0x0020;
+export const MAODUN_ENCRYPTION_TYPE = 0x41;
+
+// bundle 里另一把（module 5227 文档摘录，日历模块 com.bbk.calendar），保留备查
+export const MAODUN_PUBLIC_KEY_ALT = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmWPQgP6vW6gwHWnMyYtS
 cynrHCzvQgZQ2dCzHEWfL13u9EZ0R/1Vv5xSsli/oTFkR5bs8Glx26iHcOw2KUyp
 YaFgehuSpvuVLGtJyV96aQMGC/3WgS2ObUa2Ry7rGzwUD7KsYnnlqMOlD3IS2Ytj
